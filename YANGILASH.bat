@@ -13,21 +13,20 @@ echo  [1/4] Server to'xtatilmoqda...
 for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8000 " ^| findstr "LISTENING"') do taskkill /PID %%a /F >nul 2>&1
 timeout /t 1 /nobreak >nul
 
-:: GitHub bilan ulash (ZIP bo'lsa ham git repoga aylantiradi)
+:: GitHub bilan ulash (qotib qolmasin uchun login o'chirilgan)
 echo  [2/4] GitHub dan yangi kod yuklanmoqda...
+set GIT_TERMINAL_PROMPT=0
 git --version >nul 2>&1
 if errorlevel 1 (
-    echo        [XATO] Git topilmadi! https://git-scm.com dan o'rnating
-    pause & exit /b 1
+    echo        (Git yo'q - o'tkazib yuborildi)
+) else (
+    if not exist ".git" (
+        git init -q
+        git remote add origin https://github.com/ndoston1202-glitch/salespos.git
+    )
+    git remote set-url origin https://github.com/ndoston1202-glitch/salespos.git >nul 2>&1
+    git fetch origin main -q 2>nul && git reset --hard origin/main -q 2>nul && echo        Yangilandi! || echo        (Yangilanmadi - mavjud kod ishlatiladi)
 )
-if not exist ".git" (
-    git init -q
-    git remote add origin https://github.com/ndoston1202-glitch/salespos.git
-)
-git remote set-url origin https://github.com/ndoston1202-glitch/salespos.git >nul 2>&1
-git fetch origin main -q
-git reset --hard origin/main -q
-echo        Yangilandi!
 
 :: Virtual muhit + paketlar
 echo  [3/4] Paketlar tekshirilmoqda...
