@@ -484,7 +484,18 @@ urlpatterns += static_urls(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
 # ============================================================
 def setup_db():
     from django.core.management import call_command
+    from django.db import connection
+    # Auth/admin/token jadvallari
     call_command('migrate', interactive=False, verbosity=0, run_syncdb=True)
+    # __main__ app modellari jadvallarini to'g'ridan yaratish
+    existing = connection.introspection.table_names()
+    with connection.schema_editor() as se:
+        for model in [Printer, Category, MenuItem, Table, Order, OrderItem, Payment]:
+            if model._meta.db_table not in existing:
+                try:
+                    se.create_model(model)
+                except Exception as e:
+                    print(f"  {model.__name__}: {e}")
     if not User.objects.filter(username='admin').exists():
         User.objects.create_superuser('admin', 'admin@salespos.uz', 'admin123', first_name='Admin')
         print(">>> Admin yaratildi: admin / admin123")
