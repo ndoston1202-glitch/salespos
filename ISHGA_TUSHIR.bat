@@ -22,11 +22,14 @@ if errorlevel 1 (
 if not exist "venv" (
     echo  Birinchi ishga tushirish - tayyorlanmoqda...
     python -m venv venv
-    call venv\Scripts\activate.bat
-    echo  Paketlar o'rnatilmoqda (1 daqiqa)...
-    pip install -r requirements.txt -q --disable-pip-version-check
-) else (
-    call venv\Scripts\activate.bat
+)
+call venv\Scripts\activate.bat
+
+:: Django o'rnatilganmi tekshirish
+python -c "import django" >nul 2>&1
+if errorlevel 1 (
+    echo  Paketlar o'rnatilmoqda (1 daqiqa, bir marta)...
+    pip install Django==4.2.7 djangorestframework==3.14.0 -q --disable-pip-version-check
 )
 
 :: Eski serverni to'xtatish
@@ -36,17 +39,14 @@ for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8000 " ^| findstr "L
 start "SalesPOS Server" /min cmd /c "cd /d "%~dp0" && venv\Scripts\activate && python server.py"
 
 :: Brauzer ochish
-timeout /t 3 /nobreak >nul
+timeout /t 4 /nobreak >nul
 start http://localhost:8000
 
 echo.
 echo ============================================
 echo    TAYYOR! Brauzer ochildi
 echo    Manzil:  http://localhost:8000
-echo    Login:   admin
-echo    Parol:   admin123
+echo    Login:   admin   Parol: admin123
 echo ============================================
-echo.
-echo  Bu oynani yopsangiz ham dastur ishlayveradi.
 timeout /t 4 /nobreak >nul
 exit
