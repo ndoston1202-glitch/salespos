@@ -461,11 +461,23 @@ def setup_db():
     from django.db import connection
     # Auth/admin/token jadvallari
     call_command('migrate', interactive=False, verbosity=0, run_syncdb=True)
-    # __main__ app modellari — har birini alohida tekshirib yaratish
-    for model in [Category, MenuItem, Table, Order, OrderItem, Payment]:
+    # __main__ modellari — eski/buzuq jadvalni avtomatik qayta qurish
+    models_order = [Category, Table, MenuItem, Order, OrderItem, Payment]
+    # Teskari tartibda buzuq jadvallarni o'chirish (FK bog'liqlik uchun)
+    for model in reversed(models_order):
         try:
-            model.objects.exists()  # jadval bor va to'g'rimi?
+            list(model.objects.all()[:1])  # ustunlar mosligi to'liq tekshiriladi
         except Exception:
+            try:
+                with connection.schema_editor() as se:
+                    se.delete_model(model)
+                print(f">>> Eski jadval o'chirildi: {model.__name__}")
+            except Exception:
+                pass
+    # To'g'ri tartibda mavjud bo'lmaganlarini yaratish
+    existing = connection.introspection.table_names()
+    for model in models_order:
+        if model._meta.db_table not in existing:
             try:
                 with connection.schema_editor() as se:
                     se.create_model(model)
