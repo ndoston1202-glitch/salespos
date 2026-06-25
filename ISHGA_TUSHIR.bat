@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title SalesPOS - Ishga tushirilmoqda...
+title SalesPOS
 color 0E
 
 echo ============================================
@@ -15,38 +15,45 @@ if errorlevel 1 (
     echo  [XATO] Python topilmadi!
     echo  https://www.python.org/downloads/ dan o'rnating
     echo  ("Add Python to PATH" ni belgilang!)
-    pause & exit /b 1
+    echo.
+    pause
+    exit /b 1
 )
 
-:: Virtual muhit (birinchi marta)
+:: Virtual muhit
 if not exist "venv" (
-    echo  Birinchi ishga tushirish - tayyorlanmoqda...
+    echo  Birinchi marta - tayyorlanmoqda...
     python -m venv venv
 )
 call venv\Scripts\activate.bat
 
-:: Django o'rnatilganmi tekshirish
+:: Django o'rnatilganmi
 python -c "import django" >nul 2>&1
 if errorlevel 1 (
-    echo  Paketlar o'rnatilmoqda (1 daqiqa, bir marta)...
+    echo  Paketlar o'rnatilmoqda (1 daqiqa)...
     pip install Django==4.2.7 djangorestframework==3.14.0 -q --disable-pip-version-check
 )
 
 :: Eski serverni to'xtatish
 for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8000 " ^| findstr "LISTENING"') do taskkill /PID %%a /F >nul 2>&1
 
-:: Serverni ishga tushirish (yangi oynada)
-start "SalesPOS Server" /min cmd /c "cd /d "%~dp0" && venv\Scripts\activate && python server.py"
-
-:: Brauzer ochish
-timeout /t 4 /nobreak >nul
-start http://localhost:8000
+:: Brauzerni 4 soniyadan keyin ochish (fonda)
+start "" /b cmd /c "timeout /t 4 /nobreak >nul & start http://localhost:8000"
 
 echo.
 echo ============================================
-echo    TAYYOR! Brauzer ochildi
-echo    Manzil:  http://localhost:8000
-echo    Login:   admin   Parol: admin123
+echo    SERVER ISHGA TUSHMOQDA...
+echo    Brauzer ochiladi: http://localhost:8000
+echo    Login: admin   Parol: admin123
+echo.
+echo    BU OYNANI YOPMANG! (server shu yerda ishlaydi)
 echo ============================================
-timeout /t 4 /nobreak >nul
-exit
+echo.
+
+:: Serverni SHU oynada ishga tushirish (xato bo'lsa ko'rinadi)
+python server.py
+
+:: Agar server to'xtasa (xato), oyna ochiq qoladi
+echo.
+echo  [!] Server to'xtadi. Yuqoridagi xatoni o'qing.
+pause
