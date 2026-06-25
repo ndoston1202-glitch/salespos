@@ -443,7 +443,12 @@ def kitchen_item(request, item_id):
 #  INDEX + URLS
 # ============================================================
 def index(request):
-    return HttpResponse((BASE_DIR / 'index.html').read_text(encoding='utf-8'))
+    html = (BASE_DIR / 'index.html').read_text(encoding='utf-8')
+    app_js = (BASE_DIR / 'static' / 'app.js').read_text(encoding='utf-8')
+    # app.js ni to'g'ridan HTML ichiga joylash (static serve muammosini oldini olish)
+    html = html.replace('<script src="/static/app.js"></script>',
+                        f'<script>\n{app_js}\n</script>')
+    return HttpResponse(html)
 
 
 from django.contrib import admin
