@@ -134,18 +134,17 @@ async function pageMenu(c) {
   c.innerHTML = `
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
       <div class="flex gap-2">
-        ${['items','categories','printers'].map(t=>`
+        ${['items','categories'].map(t=>`
           <button onclick="STATE.data.menuTab='${t}';go('menu')"
             class="px-4 py-2 rounded-lg text-sm font-medium ${tab===t?'bg-brand-500 text-white':'bg-white border text-slate-600 hover:bg-slate-50'}">
-            ${{items:'🍽️ Taomlar',categories:'📂 Kategoriyalar',printers:'🖨️ Printerlar'}[t]}</button>`).join('')}
+            ${{items:'🍽️ Taomlar',categories:'📂 Kategoriyalar'}[t]}</button>`).join('')}
       </div>
-      <button onclick="${tab==='items'?'itemForm()':tab==='categories'?'catForm()':'printerForm()'}"
+      <button onclick="${tab==='items'?'itemForm()':'catForm()'}"
         class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Yangi</button>
     </div>
     <div id="menuBody"></div>`;
   if (tab==='items') await renderItems();
-  else if (tab==='categories') await renderCats();
-  else await renderPrinters();
+  else await renderCats();
 }
 
 async function renderItems() {
@@ -192,11 +191,10 @@ async function itemForm(m) {
             <option value="">— Tanlang —</option>
             ${cats.map(c=>`<option value="${c.id}" ${m?.category==c.id?'selected':''}>${c.name}</option>`).join('')}
           </select></div>
-        <div><label class="text-sm font-medium">🖨️ Printer (oshxona)</label>
-          <select id="if_printer" class="w-full border rounded-lg px-3 py-2 mt-1">
-            <option value="">— Yo'q —</option>
-            ${printers.map(p=>`<option value="${p.id}" ${m?.printer==p.id?'selected':''}>${p.name}</option>`).join('')}
-          </select></div>
+        <div><label class="text-sm font-medium">🖨️ Printer (kompyuterga ulangan)</label>
+          <input id="if_printer" value="${m?.printer||''}" list="printerList" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="Masalan: Oshxona, Salat bar">
+          <datalist id="printerList">${printers.map(p=>`<option value="${p}">`).join('')}</datalist>
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="text-sm font-medium">Sotish narxi *</label>
@@ -215,7 +213,7 @@ async function itemForm(m) {
   w.querySelector('[data-close2]').onclick = () => w.remove();
   w.querySelector('#itemF').onsubmit = async (e) => {
     e.preventDefault();
-    const body = { name:if_name.value, category:if_cat.value||null, printer:if_printer.value||null,
+    const body = { name:if_name.value, category:if_cat.value||null, printer:if_printer.value||'',
       price:if_price.value, cost_price:if_cost.value||0, description:if_desc.value, is_available:if_avail.checked };
     try {
       if (m) await api('/menu/'+m.id+'/', {method:'PATCH', body});
@@ -263,46 +261,6 @@ async function catForm(c) {
   };
 }
 async function delCat(id){ if(!confirm("O'chirilsinmi?"))return; await api('/categories/'+id+'/',{method:'DELETE'}); toast("O'chirildi"); go('menu'); }
-
-async function renderPrinters() {
-  const printers = await api('/printers/');
-  const body = document.getElementById('menuBody');
-  body.innerHTML = `
-    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 mb-4">
-      💡 Har bir taomga printer tayinlang. Buyurtma berilganda taom o'sha oshxona printeriga chiqadi.</div>
-    ${!printers.length ? empty('🖨️','Printerlar yo\'q') : `
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    ${printers.map(p=>`<div class="bg-white rounded-2xl border p-5">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-xl">🖨️</div>
-        <div><div class="font-semibold">${p.name}</div><div class="text-xs text-slate-500">${p.location||''}</div></div></div>
-        <span class="px-2 py-0.5 rounded-full text-xs ${p.is_active?'bg-green-100 text-green-700':'bg-slate-100 text-slate-500'}">${p.is_active?'Faol':'Nofaol'}</span></div>
-      <div class="flex gap-2 mt-3">
-        <button onclick='printerForm(${JSON.stringify(p)})' class="flex-1 bg-orange-50 text-orange-600 py-1.5 rounded-lg text-xs">✏️ Tahrirlash</button>
-        <button onclick="delPrinter(${p.id})" class="flex-1 bg-red-50 text-red-500 py-1.5 rounded-lg text-xs">🗑️ O'chirish</button></div>
-      </div>`).join('')}</div>`}`;
-}
-async function printerForm(p) {
-  const w = modal(p?'✏️ Printer':'🖨️ Yangi printer', `
-    <form id="prF" class="space-y-4">
-      <div><label class="text-sm font-medium">Printer nomi *</label>
-        <input id="pf_name" value="${p?.name||''}" required class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="Oshxona #1, Salat bar..."></div>
-      <div><label class="text-sm font-medium">Joylashuv</label>
-        <input id="pf_loc" value="${p?.location||''}" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="Asosiy oshxona..."></div>
-      <label class="flex items-center gap-2"><input id="pf_active" type="checkbox" ${!p||p.is_active?'checked':''} class="w-4 h-4 accent-brand-500"> Faol</label>
-      <div class="flex gap-2 justify-end pt-2 border-t">
-        <button type="button" data-close2 class="px-5 py-2 border rounded-lg">Bekor</button>
-        <button class="px-5 py-2 bg-brand-500 text-white rounded-lg font-medium">💾 Saqlash</button></div>
-    </form>`);
-  w.querySelector('[data-close2]').onclick = () => w.remove();
-  w.querySelector('#prF').onsubmit = async (e) => {
-    e.preventDefault();
-    const body = {name:pf_name.value, location:pf_loc.value, is_active:pf_active.checked};
-    try { if(p) await api('/printers/'+p.id+'/',{method:'PATCH',body}); else await api('/printers/',{method:'POST',body});
-      toast('Saqlandi!'); w.remove(); go('menu'); } catch(err){ toast(err.message,'error'); }
-  };
-}
-async function delPrinter(id){ if(!confirm("O'chirilsinmi?"))return; await api('/printers/'+id+'/',{method:'DELETE'}); toast("O'chirildi"); go('menu'); }
 
 function empty(icon, text) {
   return `<div class="bg-white rounded-2xl border text-center py-16 text-slate-400">

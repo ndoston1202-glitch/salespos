@@ -83,14 +83,6 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class Printer(models.Model):
-    name = models.CharField(max_length=100)
-    location = models.CharField(max_length=100, blank=True)
-    is_active = models.BooleanField(default=True)
-    class Meta:
-        app_label = '__main__'
-
-
 class Category(models.Model):
     name = models.CharField(max_length=100)
     order = models.IntegerField(default=0)
@@ -102,7 +94,7 @@ class Category(models.Model):
 
 class MenuItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items', null=True, blank=True)
-    printer = models.ForeignKey(Printer, on_delete=models.SET_NULL, null=True, blank=True)
+    printer = models.CharField(max_length=100, blank=True, help_text='Kompyuterga ulangan printer nomi')
     name = models.CharField(max_length=200)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -197,28 +189,12 @@ def me_view(request):
     return Response(u_data(request.user))
 
 
-# ---- PRINTERS ----
-@api_view(['GET', 'POST'])
+# ---- PRINTERLAR (kompyuterga ulangan, ishlatilgan nomlar ro'yxati) ----
+@api_view(['GET'])
 def printers(request):
-    if request.method == 'POST':
-        p = Printer.objects.create(name=request.data.get('name', ''), location=request.data.get('location', ''),
-                                   is_active=request.data.get('is_active', True))
-        return Response({'id': p.id})
-    return Response([{'id': p.id, 'name': p.name, 'location': p.location, 'is_active': p.is_active}
-                     for p in Printer.objects.all()])
-
-
-@api_view(['PATCH', 'DELETE'])
-def printer_detail(request, pk):
-    try:
-        p = Printer.objects.get(pk=pk)
-    except Printer.DoesNotExist:
-        return Response({'detail': 'topilmadi'}, status=404)
-    if request.method == 'DELETE':
-        p.delete(); return Response({'ok': True})
-    for f in ['name', 'location', 'is_active']:
-        if f in request.data: setattr(p, f, request.data[f])
-    p.save(); return Response({'ok': True})
+    # Menyuda ishlatilgan printer nomlarini qaytaradi (tanlash uchun)
+    names = MenuItem.objects.exclude(printer='').values_list('printer', flat=True).distinct()
+    return Response(sorted(set(names)))
 
 
 # ---- CATEGORIES ----
@@ -249,7 +225,7 @@ def mi_data(m):
     return {'id': m.id, 'name': m.name, 'price': float(m.price), 'cost_price': float(m.cost_price),
             'profit': float(m.price) - float(m.cost_price), 'is_available': m.is_available, 'description': m.description,
             'category': m.category_id, 'category_name': m.category.name if m.category else '',
-            'printer': m.printer_id, 'printer_name': m.printer.name if m.printer else ''}
+            'printer': m.printer, 'printer_name': m.printer}
 
 
 # ---- MENU ----
@@ -259,11 +235,11 @@ def menu_items(request):
         m = MenuItem.objects.create(name=request.data.get('name', ''), price=request.data.get('price') or 0,
                                     cost_price=request.data.get('cost_price') or 0,
                                     category_id=request.data.get('category') or None,
-                                    printer_id=request.data.get('printer') or None,
+                                    printer=request.data.get('printer') or '',
                                     is_available=request.data.get('is_available', True),
                                     description=request.data.get('description', ''))
         return Response(mi_data(m))
-    qs = MenuItem.objects.select_related('category', 'printer').all()
+    qs = MenuItem.objects.select_related('category').all()
     if request.GET.get('category'):
         qs = qs.filter(category_id=request.GET['category'])
     return Response([mi_data(m) for m in qs])
@@ -277,10 +253,9 @@ def menu_item_detail(request, pk):
         return Response({'detail': 'topilmadi'}, status=404)
     if request.method == 'DELETE':
         m.delete(); return Response({'ok': True})
-    for f in ['name', 'price', 'cost_price', 'is_available', 'description']:
+    for f in ['name', 'price', 'cost_price', 'is_available', 'description', 'printer']:
         if f in request.data: setattr(m, f, request.data[f])
     if 'category' in request.data: m.category_id = request.data['category'] or None
-    if 'printer' in request.data: m.printer_id = request.data['printer'] or None
     m.save(); return Response(mi_data(m))
 
 
@@ -319,8 +294,8 @@ def o_data(o):
             'total': float(o.total), 'created_at': o.created_at.isoformat(),
             'items': [{'id': i.id, 'menu_item': i.menu_item_id, 'name': i.menu_item.name, 'quantity': i.quantity,
                        'price': float(i.price), 'status': i.status, 'note': i.note,
-                       'printer_name': i.menu_item.printer.name if i.menu_item.printer else ''}
-                      for i in o.items.select_related('menu_item', 'menu_item__printer').all()]}
+                       'printer_name': i.menu_item.printer}
+                      for i in o.items.select_related('menu_item').all()]}
 
 
 # ---- ORDERS ----
@@ -459,7 +434,6 @@ urlpatterns = [
     path('api/login/', login_view),
     path('api/me/', me_view),
     path('api/printers/', printers),
-    path('api/printers/<int:pk>/', printer_detail),
     path('api/categories/', categories),
     path('api/categories/<int:pk>/', category_detail),
     path('api/menu/', menu_items),
@@ -488,7 +462,7 @@ def setup_db():
     # Auth/admin/token jadvallari
     call_command('migrate', interactive=False, verbosity=0, run_syncdb=True)
     # __main__ app modellari — har birini alohida tekshirib yaratish
-    for model in [Printer, Category, MenuItem, Table, Order, OrderItem, Payment]:
+    for model in [Category, MenuItem, Table, Order, OrderItem, Payment]:
         try:
             model.objects.exists()  # jadval bor va to'g'rimi?
         except Exception:
