@@ -96,7 +96,7 @@ async function pageDashboard(c) {
       ${statCard('🧾','Bugungi buyurtmalar', d.today_orders, 'bg-blue-500')}
       ${statCard('💰','Bugungi tushum', money(d.today_revenue), 'bg-brand-500')}
       ${statCard('🔥','Faol buyurtmalar', d.active_orders, 'bg-orange-500')}
-      ${statCard('🪑','Bo\\'sh stollar', d.tables_free+' / '+d.tables_total, 'bg-green-500')}
+      ${statCard('🪑',"Bo'sh stollar", d.tables_free+' / '+d.tables_total, 'bg-green-500')}
     </div>
     <div class="bg-white rounded-2xl border p-6 text-center text-slate-500">
       <div class="text-5xl mb-3">🍽️</div>
